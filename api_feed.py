@@ -184,6 +184,18 @@ def clearImg(imagen,sizeX=330,sizeY=180,porcent=10,thresh=False,white=False,extr
         
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def borrarUltimo():
 
     dataset = list(np.load("dataset_placas.npy"))
@@ -197,3 +209,153 @@ def borrarUltimo():
        
     np.save("labels_placas",np.array(labels))
     np.save("dataset_placas",np.array(dataset))
+
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from keras.layers import Dense,Conv2D,MaxPool2D,Dropout,Input,Flatten
+from keras.models import Model
+from keras.optimizers import Adam
+
+
+def model(output):
+    inputs = Input(shape=(32,32,1))
+    x = Conv2D(1024,kernel_size=(3,3),activation="relu")(inputs)
+    x = Dropout(0.5)(x)
+    x = Conv2D(1024,kernel_size=(3,3), activation="relu")(x)
+    x = Dropout(.25)(x)
+    x = MaxPool2D(pool_size=(3,3),padding="same")(x)
+    x = Conv2D(540,kernel_size=(3,3),activation="relu")(x)
+    x = Dropout(.5)(x)
+    x = Flatten()(x)
+    x = Dense(340,activation="relu")(x)
+    x = Dropout(.25)(x)
+    x = Dense(output,activation="softmax")(x)
+
+    model = Model(inputs=inputs,outputs=x)
+    model.compile(optimizer=Adam(learning_rate=0.005,beta_1=0.93,beta_2=0.99),loss="mse",metrics=["accuracy","mse"])
+
+    return model
+
+from sklearn.preprocessing import OneHotEncoder
+ohe = OneHotEncoder(categories="auto",sparse=False)
+
+
+#model = SVC(kernel="linear",C=100.0)
+model2 = 0
+
+def feed_predict():
+    dataset = np.load("dataset_placas.npy")
+    labels = np.load("labels_placas.npy")
+    
+   
+    
+    hot = ohe.fit_transform(labels.reshape(labels.shape[0],1))
+    model2 = model(len(hot[0]))
+    dataset = dataset.reshape(dataset.shape[0],32,32,1)
+
+    xtrain,xtest,ytrain,ytest = train_test_split(dataset,hot,train_size=0.2,random_state=30,stratify=hot)
+    print(xtrain.shape)
+    print(ytrain.shape)
+    print(xtest.shape)
+    print(ytest.shape)
+    #model2.summary()
+    model2.fit(xtest,ytest,batch_size=10000,epochs=100,validation_data=(xtrain,ytrain),verbose=1)
+
+
+    #model.fit(xtrain,ytrain)
+    #xtest_predict = model.predict(xtest)
+    #print("La presicion el model es de: "+str(accuracy_score(ytest,xtest_predict)))
+    
+
+
+
+
+
+
+
+
+
+
+def predict(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True,clear=False,extraY=10,minArea=800.0):
+
+    img = cv2.imread("./imagen/"+imagen)
+    if(clear):
+        img = clearImg(imagen,porcent=25,extraY=extraY)
+        
+    img = cv2.resize(img,(sizeX,sizeY))
+    black = np.zeros((sizeY,sizeX,3),np.uint8)
+    blue = np.ones((sizeY,sizeX,3),np.uint8)
+    blue = cv2.cvtColor(blue,cv2.COLOR_BGR2HSV)
+    white = blue.copy()
+    img2 = img.copy()
+    img_gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    img_hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+    kernel = np.ones((kernel,kernel),np.uint8)
+    save = True
+
+    blue[:,:,0]=250
+    blue[:,:,1]=100
+    blue[:,:,2]=100
+
+    white[:,:,0]=0
+    white[:,:,1]=100
+    white[:,:,2]=100    
+
+    #CONFIGURACION DE NEGROS.
+    mask = cv2.inRange(img_gray,np.array([0]),np.array([maxColor]))
+    #mask = cv2.inRange(img_hsv,np.array([0,0,0]),np.array([360,100,maxColor]))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, (3,3))
+
+    if(morph):
+        erosion = cv2.erode(mask,kernel,iterations=1)
+        dilation = cv2.dilate(erosion,kernel,iterations=1)
+        dilation_not = cv2.bitwise_not(dilation)
+    else:
+        print("skip morph")
+        erosion = mask.copy()
+        dilation = mask.copy()
+        dilation_not = cv2.bitwise_not(dilation)
+
+
+
+    bitwising = cv2.bitwise_or(img2,blue,mask=dilation)
+
+
+    contours,_ = cv2.findContours(dilation,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+
+    def getX(cont):
+        x,_,_,_ = cv2.boundingRect(cont)
+        return x
+
+    contours.sort(key=getX,reverse=False)
+
+    predicciones=[]
+
+    for cont in contours:
+        x,y,w,h = cv2.boundingRect(cont)
+        crop = img2[y:y+h,x:x+w]
+        crop = cv2.resize(crop,(500,500))
+        area = cv2.contourArea(cont)
+        if(area > minArea):
+            peke = cv2.resize(crop,(32,32))
+            peke = cv2.cvtColor(peke,cv2.COLOR_BGR2GRAY)
+            xpeke = peke.reshape(1,1024)
+            predic = model.predict(xpeke)
+            predicciones.append({"prediccion":list(predic)[0],"Area":area})
+
+    def prediccionesA(predic):
+        return predic["Area"]
+
+    prediccion2 = predicciones.copy()
+    predicciones.sort(key=prediccionesA) 
+
+    while(len(prediccion2)>7):
+        for index,dato in enumerate(prediccion2):
+            if dato == predicciones[0]:
+                prediccion2.remove(dato)
+
+    arr = ""
+    for letra in prediccion2:
+        arr += str(letra["prediccion"])
+    return arr

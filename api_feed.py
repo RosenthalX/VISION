@@ -4,10 +4,12 @@ import collections
 import matplotlib.pyplot as plt
 
 
-def feed(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True):
+def feed(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True,clear=False,extraY=10,minArea=800.0):
     img = cv2.imread("./imagen/"+imagen)
+    if(clear):
+        img = clearImg(imagen,porcent=25,extraY=extraY)
+        
     img = cv2.resize(img,(sizeX,sizeY))
-
     black = np.zeros((sizeY,sizeX,3),np.uint8)
     blue = np.ones((sizeY,sizeX,3),np.uint8)
     blue = cv2.cvtColor(blue,cv2.COLOR_BGR2HSV)
@@ -76,7 +78,7 @@ def feed(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True):
         crop = img2[y:y+h,x:x+w]
         crop = cv2.resize(crop,(500,500))
         area = cv2.contourArea(cont)
-        if(area > 500.0):
+        if(area > minArea):
             cv2.imshow("Crop area:"+str(area),crop)
             key = (cv2.waitKey(0) & 0xFF)
             if(key in KEYS):
@@ -141,3 +143,57 @@ def plotCont(plotter=False):
     plt.title("Almacenamiento actual letras")
     plt.legend(loc="upper right")
     plt.show()
+
+
+def clearImg(imagen,sizeX=330,sizeY=180,porcent=10,thresh=False,white=False,extraX=0,extraY=0,minArea=800):
+    
+    img = cv2.imread("./imagen/"+imagen)
+    img = cv2.resize(img,(sizeX,sizeY))
+    
+    def change(i):
+        pass
+    
+    
+    img2 = img.copy()
+    img2 = cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
+
+    porcent = int(100/porcent)
+    print(img2.shape)
+    print("porcent: "+str(porcent))
+    #mask = cv2.inRange(img,min,max)
+
+    x10 = int(sizeX/porcent)
+    y10 = int(sizeY/porcent)
+
+
+    zero = np.zeros((img2.shape),np.uint8)
+    filling = 255
+
+    zero[0:y10,0:sizeX] = [255]
+    zero[sizeY-y10:sizeY,0:sizeX] = [255]
+
+
+    zero_mask = zero.copy()
+    zero = cv2.bitwise_not(zero)
+
+    crop = img[y10:sizeY-y10-extraY,0:sizeX]
+    zero = cv2.bitwise_and(img,img,mask=zero)
+    
+    print(zero.shape)
+    return crop
+        
+
+
+def borrarUltimo():
+
+    dataset = list(np.load("dataset_placas.npy"))
+    labels = list(np.load("labels_placas.npy"))
+
+    dataset = dataset[:-1]
+    labels = labels[:-1]
+
+    print("La longitus de labels es de ",str(len(labels)))
+    print("Las imagenes guardadas son :",str(len(dataset))," y el shape es "+str(np.array(dataset).shape))
+       
+    np.save("labels_placas",np.array(labels))
+    np.save("dataset_placas",np.array(dataset))

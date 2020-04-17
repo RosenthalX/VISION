@@ -13,5 +13,5 @@ c=0
 
 
 api.feed_predict()
-#placa = api.predict("p2.jpg",minArea=100.0)
-#print(placa)
+placa = api.predict("p3.jpg",minArea=100.0,clear=True)
+print(placa)

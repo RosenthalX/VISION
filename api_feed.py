@@ -213,59 +213,25 @@ def borrarUltimo():
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from keras.layers import Dense,Conv2D,MaxPool2D,Dropout,Input,Flatten
-from keras.models import Model
-from keras.optimizers import Adam
 
 
-def model(output):
-    inputs = Input(shape=(32,32,1))
-    x = Conv2D(1024,kernel_size=(3,3),activation="relu")(inputs)
-    x = Dropout(0.5)(x)
-    x = Conv2D(1024,kernel_size=(3,3), activation="relu")(x)
-    x = Dropout(.25)(x)
-    x = MaxPool2D(pool_size=(3,3),padding="same")(x)
-    x = Conv2D(540,kernel_size=(3,3),activation="relu")(x)
-    x = Dropout(.5)(x)
-    x = Flatten()(x)
-    x = Dense(340,activation="relu")(x)
-    x = Dropout(.25)(x)
-    x = Dense(output,activation="softmax")(x)
-
-    model = Model(inputs=inputs,outputs=x)
-    model.compile(optimizer=Adam(learning_rate=0.005,beta_1=0.93,beta_2=0.99),loss="mse",metrics=["accuracy","mse"])
-
-    return model
-
-from sklearn.preprocessing import OneHotEncoder
-ohe = OneHotEncoder(categories="auto",sparse=False)
 
 
-#model = SVC(kernel="linear",C=100.0)
-model2 = 0
+
+model = SVC(kernel="linear",C=50.0,gamma="auto",probability=True,tol=0.002)
+
 
 def feed_predict():
     dataset = np.load("dataset_placas.npy")
     labels = np.load("labels_placas.npy")
     
-   
-    
-    hot = ohe.fit_transform(labels.reshape(labels.shape[0],1))
-    model2 = model(len(hot[0]))
-    dataset = dataset.reshape(dataset.shape[0],32,32,1)
+    dataset = dataset.reshape(dataset.shape[0],1024)
 
-    xtrain,xtest,ytrain,ytest = train_test_split(dataset,hot,train_size=0.2,random_state=30,stratify=hot)
-    print(xtrain.shape)
-    print(ytrain.shape)
-    print(xtest.shape)
-    print(ytest.shape)
-    #model2.summary()
-    model2.fit(xtest,ytest,batch_size=10000,epochs=100,validation_data=(xtrain,ytrain),verbose=1)
+    xtrain,xtest,ytrain,ytest = train_test_split(dataset,labels,train_size=0.2,random_state=30,stratify=labels)
 
-
-    #model.fit(xtrain,ytrain)
-    #xtest_predict = model.predict(xtest)
-    #print("La presicion el model es de: "+str(accuracy_score(ytest,xtest_predict)))
+    model.fit(xtrain,ytrain)
+    xtest_predict = model.predict(xtest)
+    print("La presicion el model es de: "+str(accuracy_score(ytest,xtest_predict)))
     
 
 
@@ -305,23 +271,24 @@ def predict(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True
     #CONFIGURACION DE NEGROS.
     mask = cv2.inRange(img_gray,np.array([0]),np.array([maxColor]))
     #mask = cv2.inRange(img_hsv,np.array([0,0,0]),np.array([360,100,maxColor]))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, (3,3))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, (6,6))
 
-    if(morph):
-        erosion = cv2.erode(mask,kernel,iterations=1)
-        dilation = cv2.dilate(erosion,kernel,iterations=1)
-        dilation_not = cv2.bitwise_not(dilation)
-    else:
-        print("skip morph")
-        erosion = mask.copy()
-        dilation = mask.copy()
-        dilation_not = cv2.bitwise_not(dilation)
+
+    #erosion = cv2.erode(mask,kernel,iterations=1)
+    #dilation = cv2.dilate(erosion,kernel,iterations=1)
+    #dilation_not = cv2.bitwise_not(dilation)
+
+    #print("skip morph")
+    erosion = mask.copy()
+    dilation = mask.copy()
+    dilation_not = cv2.bitwise_not(dilation)
 
 
 
     bitwising = cv2.bitwise_or(img2,blue,mask=dilation)
 
-
+    #cv2.imshow("dilation",dilation)
+    #cv2.waitKey(0)
     contours,_ = cv2.findContours(dilation,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
     def getX(cont):
@@ -342,18 +309,28 @@ def predict(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True
             peke = cv2.cvtColor(peke,cv2.COLOR_BGR2GRAY)
             xpeke = peke.reshape(1,1024)
             predic = model.predict(xpeke)
-            predicciones.append({"prediccion":list(predic)[0],"Area":area})
+            print("Para "+list(predic)[0]+" se tiene un mean de "+str(np.mean(xpeke)))
+            predicciones.append({"prediccion":list(predic)[0],"Area":area,"Mean":np.mean(xpeke)})
+            #cv2.imshow("LETRA: "+str(list(predic)[0]),crop)
+            #cv2.waitKey(0)
 
     def prediccionesA(predic):
-        return predic["Area"]
+        return predic["Mean"]
 
     prediccion2 = predicciones.copy()
     predicciones.sort(key=prediccionesA) 
 
-    while(len(prediccion2)>7):
-        for index,dato in enumerate(prediccion2):
-            if dato == predicciones[0]:
-                prediccion2.remove(dato)
+    remover = 0
+    #while(len(prediccion2)>7):
+     #   print("len de predicciones 2"+str(len(prediccion2)))
+      #  for dato in prediccion2:
+       #     if dato == predicciones[remover]:
+        #        prediccion2.remove(dato)
+         #       remover += 1
+
+    for dato in prediccion2:
+        if dato["Mean"]<50:
+            prediccion2.remove(dato) 
 
     arr = ""
     for letra in prediccion2:

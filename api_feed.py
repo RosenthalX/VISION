@@ -4,10 +4,13 @@ import collections
 import matplotlib.pyplot as plt
 
 
-def feed(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True,clear=False,extraY=10,minArea=800.0):
+def feed(imagen,powerClear=100.0,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True,clear=False,extraY=10,clearColor=False,minArea=800.0):
     img = cv2.imread("./imagen/"+imagen)
     if(clear):
         img = clearImg(imagen,porcent=25,extraY=extraY)
+
+    if(clearColor):
+        img = clearMat(img,errorT=powerClear)
         
     img = cv2.resize(img,(sizeX,sizeY))
     black = np.zeros((sizeY,sizeX,3),np.uint8)
@@ -243,12 +246,14 @@ def feed_predict():
 
 
 
-def predict(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True,clear=False,extraY=10,minArea=800.0):
+def predict(imagen,powerClear=100.0,ver=False,dobleMorph=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True,clear=False,extraY=10,minArea=800.0,meanArea=73,clearColor=False):
 
     img = cv2.imread("./imagen/"+imagen)
     if(clear):
         img = clearImg(imagen,porcent=25,extraY=extraY)
         
+    if(clearColor):
+        img = clearMat(img,errorT=powerClear)
     img = cv2.resize(img,(sizeX,sizeY))
     black = np.zeros((sizeY,sizeX,3),np.uint8)
     blue = np.ones((sizeY,sizeX,3),np.uint8)
@@ -286,9 +291,10 @@ def predict(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True
 
 
     bitwising = cv2.bitwise_or(img2,blue,mask=dilation)
-
-    #cv2.imshow("dilation",dilation)
-    #cv2.waitKey(0)
+    if(dobleMorph):
+        dilation = cv2.morphologyEx(dilation, cv2.MORPH_CLOSE, (6,6))
+    cv2.imshow("dilation",dilation)
+    cv2.waitKey(0)
     contours,_ = cv2.findContours(dilation,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
     def getX(cont):
@@ -329,10 +335,26 @@ def predict(imagen,ver=False,maxColor=40,kernel=2,sizeX=330,sizeY=180,morph=True
          #       remover += 1
 
     for dato in prediccion2:
-        if dato["Mean"]<50:
+        if dato["Mean"]<meanArea:
             prediccion2.remove(dato) 
+        
 
     arr = ""
     for letra in prediccion2:
         arr += str(letra["prediccion"])
     return arr
+
+
+
+
+def clearMat(img,errorT=25.0):
+    x,y,z = img.shape
+    for i in range(0,x):
+        for j in range(0,y):
+            b,g,r = img[i,j]
+            arr = np.array([b,g,r])
+            error = abs((arr-arr.mean())).sum()
+            if(error > errorT):
+                img[i,j] = [255,255,255]
+
+    return img

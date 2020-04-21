@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt 
 import sys
 import numpy as np
-
+import cv2
 #ejercisio en https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 #practica en https://practice.geeksforgeeks.org/problems/check-if-two-line-segments-intersect/0
 #datos python en https://www.tutorialspoint.com/python/python_xml_processing.htm
@@ -23,4 +23,16 @@ if __name__ == '__main__':
     plt.plot(arr2[0],arr2[1],c="g")
     plt.yticks(np.arange(0,10))
     plt.xticks(np.arange(0,10))
-    plt.show()
+
+
+
+import pyautogui
+while True:
+    captura = pyautogui.screenshot()
+    captura =(np.array(captura))
+    cvcaptura = cv2.resize(captura,(500,600))
+    cv2.imshow("Imagen",cvcaptura)
+    key = cv2.waitKey(int(3000)) & 0xFF
+    if(key==ord("q")):
+        break
+    cv2.destroyAllWindows()

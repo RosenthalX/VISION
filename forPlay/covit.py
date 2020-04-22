@@ -3,9 +3,10 @@ import zipfile
 import pandas as pd
 from datetime import datetime,timedelta,date
 import numpy as np
+import matplotlib.pyplot as plt
 
 zipFile = "http://187.191.75.115/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip"
-
+plt.figure(figsize=(18,6.4))
 #usock = url_.urlopen(zipFile)
 #usock = usock.read()
 
@@ -23,11 +24,74 @@ obj_name=zip_file.namelist()[0]
 #output.close()
 
 df = pd.read_csv(obj_name)
-#print(df.keys())
+#print(df.keys())}
+
+plt.title("Covid Reynosa")
 
 df["FECHA_INGRESO"] = pd.to_datetime(df["FECHA_INGRESO"])
+print("Antes de filtrado tamaulipas:"+str(len(df)))
+df = df.loc[df["ENTIDAD_NAC"]==28]
+print("Filtrado tamaulipas:"+str(len(df)))
+df = df.loc[df["MUNICIPIO_RES"]==32]
+print("Filtrado victoria:"+str(len(df)))
 
-X = np.arange(date(2020,4,1),date(2020,4,20),timedelta(days=1)).astype(date)
+X = np.arange(date(2020,3,27),date(2020,4,21),timedelta(days=1)).astype(date)
 
 print(len(df["FECHA_INGRESO"].loc[df["FECHA_INGRESO"] == "2020-04-18"]))
-print(X[0].date.value)
+PLOTTERS = []
+
+#positivos 1 , no positivos 2 , pendientes 3
+x = np.arange(0,19,1)
+y = []
+maxi=0
+
+for i,date in enumerate(X):
+    casualidades = len(df["FECHA_INGRESO"].loc[df["FECHA_INGRESO"] == date])
+    
+    #print('index {} para fecha {} casos estimados {}'.format(i,date,casualidades))
+    y.append(casualidades)
+PLOTTERS.append(plt.plot(X,y,c="b",label="Casos")[0])
+#plt.scatter(X,y,c="r",label="Interes",marker="*")
+
+
+print("Total de casos: "+str(len(df)))
+
+df2 = df.loc[df["RESULTADO"]==1]
+y=[]
+for i,date in enumerate(X):
+    casualidades = len(df2["FECHA_INGRESO"].loc[df2["FECHA_INGRESO"] == date])
+    #print('index {} para fecha {} casos estimados {}'.format(i,date,casualidades))
+    y.append(casualidades)
+PLOTTERS.append(plt.plot(X,y,c="r",label="Positivos")[0])
+print("Positivos: "+str(len(df2)))
+#plt.scatter(X,y,c="black",label="Positivos",marker="x")
+
+
+df2 = df.loc[df["RESULTADO"]==2]
+y=[]
+for i,date in enumerate(X):
+    casualidades = len(df2["FECHA_INGRESO"].loc[df2["FECHA_INGRESO"] == date])
+    #print('index {} para fecha {} casos estimados {}'.format(i,date,casualidades))
+    y.append(casualidades)
+PLOTTERS.append(plt.plot(X,y,c="g",label="Negativos")[0])
+print("Negativos: "+str(len(df2)))
+#plt.scatter(X,y,c="black",label="Negativos",marker="x")
+
+df2 = df.loc[df["RESULTADO"]==3]
+y=[]
+for i,date in enumerate(X):
+    casualidades = len(df2["FECHA_INGRESO"].loc[df2["FECHA_INGRESO"] == date])
+    #print('index {} para fecha {} casos estimados {}'.format(i,date,casualidades))
+    y.append(casualidades)
+print("Pendientes: "+str(len(df2)))
+PLOTTERS.append(plt.plot(X,y,c="black",label="Pendientes")[0])
+#plt.scatter(X,y,c="black",label="Positivos",marker="x")
+
+
+plt.xticks(X,rotation="vertical")
+plt.yticks(np.arange(0,13,1))
+plt.xlabel("Array")
+plt.legend(PLOTTERS,["TOTAL","POS","NEG","PEND"])
+plt.grid()
+
+plt.show()

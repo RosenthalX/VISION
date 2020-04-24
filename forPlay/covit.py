@@ -4,40 +4,53 @@ import pandas as pd
 from datetime import datetime,timedelta,date
 import numpy as np
 import matplotlib.pyplot as plt
-
-zipFile = "http://187.191.75.115/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip"
 plt.figure(figsize=(18,6.4))
-#usock = url_.urlopen(zipFile)
-#usock = usock.read()
+def start():
+    zipFile = "http://187.191.75.115/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip"
+    
+    usock = url_.urlopen(zipFile)
+    usock = usock.read()
 
-#output = open("covit.zip",'wb')
-#output.write(usock)
-#output.close()
+    output = open("covit.zip",'wb')
+    output.write(usock)
+    output.close()
 
-zip_file = zipfile.ZipFile("covit.zip")
+    zip_file = zipfile.ZipFile("covit.zip")
 
-obj_name=zip_file.namelist()[0]
-#obj = zip_file.read(obj_name)
+    obj_name=zip_file.namelist()[0]
+    obj = zip_file.read(obj_name)
 
-#output = open(obj_name,'wb')
-#output.write(obj)
-#output.close()
+    output = open(obj_name,'wb')
+    output.write(obj)
+    output.close()
 
-df = pd.read_csv(obj_name)
+isStart = False
+
+if(isStart):
+    start()
+else:
+    zip_file = zipfile.ZipFile("covit.zip")
+    obj_name=zip_file.namelist()[0]
+    obj = zip_file.read(obj_name)
+
+df = pd.read_csv(obj_name,encoding = "ISO-8859-1")
 #print(df.keys())}
 
-plt.title("Covid Reynosa")
+plt.title("Covid Victoria")
 
 df["FECHA_INGRESO"] = pd.to_datetime(df["FECHA_INGRESO"])
 print("Antes de filtrado tamaulipas:"+str(len(df)))
+
+
 df = df.loc[df["ENTIDAD_NAC"]==28]
 print("Filtrado tamaulipas:"+str(len(df)))
-df = df.loc[df["MUNICIPIO_RES"]==32]
+
+
+df = df.loc[df["MUNICIPIO_RES"]==41]
 print("Filtrado victoria:"+str(len(df)))
 
-X = np.arange(date(2020,3,27),date(2020,4,21),timedelta(days=1)).astype(date)
-
-print(len(df["FECHA_INGRESO"].loc[df["FECHA_INGRESO"] == "2020-04-18"]))
+X = np.arange(date(2020,3,27),date(2020,4,24),timedelta(days=1)).astype(date)
+#print(len(df["FECHA_INGRESO"].loc[df["FECHA_INGRESO"] == "2020-04-18"]))
 PLOTTERS = []
 
 #positivos 1 , no positivos 2 , pendientes 3
@@ -50,7 +63,8 @@ for i,date in enumerate(X):
     
     #print('index {} para fecha {} casos estimados {}'.format(i,date,casualidades))
     y.append(casualidades)
-PLOTTERS.append(plt.plot(X,y,c="b",label="Casos")[0])
+#PLOTTERS.append(plt.plot(X,y,c="b",label="Casos")[0])
+plt.bar(X,y)
 #plt.scatter(X,y,c="r",label="Interes",marker="*")
 
 
@@ -89,7 +103,7 @@ PLOTTERS.append(plt.plot(X,y,c="black",label="Pendientes")[0])
 
 
 plt.xticks(X,rotation="vertical")
-plt.yticks(np.arange(0,13,1))
+plt.yticks(np.arange(0,37,1))
 plt.xlabel("Array")
 plt.legend(PLOTTERS,["TOTAL","POS","NEG","PEND"])
 plt.grid()

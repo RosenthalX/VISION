@@ -47,8 +47,8 @@ for cont in conts[:]:
         img = cv2.circle(img,(eC[0],eC[1]),3,(255,0,0),cv2.FILLED)
         img = cv2.circle(img,(eD[0],eD[1]),3,(255,255,0),cv2.FILLED)
 
-        pts1 = np.float32([[eA[0],eA[1]],[eD[0],eD[1]],[eC[0],eC[1]],[eB[0],eB[1]]])
-        pts2 = np.float32([[0,0],[cols,0],[0,rows],[rows,cols]])
+        pts1 = np.float32([[eD[0],eD[1]],[eC[0],eC[1]],[eA[0],eA[1]],[eB[0],eB[1]]])
+        pts2 = np.float32([[0,0],[rows,0],[0,cols],[rows,cols]])
 
         matrix = cv2.getPerspectiveTransform(pts1,pts2)
         output = cv2.warpPerspective(img,matrix,(rows,cols))
@@ -57,7 +57,8 @@ for cont in conts[:]:
 
         x,y,w,h = cv2.boundingRect(cont)
         img_copy = img.copy()
-        cv2.imshow("Crop",output)
+        cv2.imshow("Crop",img)
+        cv2.imshow("wraped",output)
         cv2.waitKey(0)
 
 

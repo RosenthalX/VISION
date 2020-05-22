@@ -28,16 +28,6 @@ def decode_labels(message, offset):
 
 
 DNS_QUERY_SECTION_FORMAT = struct.Struct("!2H")
-
-
-
-
-
-
-
-
-
-
 def decode_question_section(message, offset, qdcount):
     questions = []
 

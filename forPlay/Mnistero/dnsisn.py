@@ -12,7 +12,7 @@ def decode_labels(message, offset):
         if (length & 0xC0) == 0xC0:
             pointer, = struct.unpack_from("!H", message, offset)
             offset += 2
-
+            print("Length: {} --- Pointer: {} ---Offset: {}".format(str(length),str(pointer & 0x3FFF),str(offset)))
             return labels + decode_labels(message, pointer & 0x3FFF), offset
 
         if (length & 0xC0) != 0x00:
@@ -25,6 +25,11 @@ def decode_labels(message, offset):
 
         labels.append(*struct.unpack_from("!%ds" % length, message, offset))
         offset += length
+
+
+
+
+
 
 
 DNS_QUERY_SECTION_FORMAT = struct.Struct("!2H")

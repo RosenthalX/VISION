@@ -13,6 +13,7 @@ def video_readeR(classifier,video="placas.mp4",skip=8):
             contador += 1
             frame = cv2.resize(frame,(800,500))
             img_gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+            img_gray = cv2.GaussianBlur(img_gray,(3,3),3)
             _,img_thresh = cv2.threshold(img_gray,127,255,cv2.THRESH_BINARY)
             contours,_ = cv2.findContours(img_thresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
